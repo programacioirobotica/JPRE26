@@ -1,0 +1,133 @@
+﻿<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XVIII Jornada de Programació i Robòtica Educatives</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div class="hero__brand">
+          <img class="hero__logo" src="logo.png" alt="Logo de la jornada" />
+          <div>
+            <p class="hero__tag">#JPRE26</p>
+            <h1>XVIII Jornada de Programació i Robòtica Educatives</h1>
+            <p class="hero__subtitle">Formulari d’inscripció en línia</p>
+          </div>
+        </div>
+        <div class="hero__panel">
+          <p>
+            Emplena les teves dades, escull <strong>un taller</strong> d'alguna de les franges
+          i confirma la inscripció.
+          </p>
+          <ul class="hero__rules">
+            </ul>
+          <p class="hero__support">
+            Necessites ajuda? Escriu a
+            <a href="mailto:programacioirobotica@xtec.cat">programacioirobotica@xtec.cat</a>.
+          </p>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="card">
+          <h2>Dades personals</h2>
+          <form id="registration-form" novalidate>
+            <div class="form-grid">
+              <label>
+                Nom i cognoms
+                <input type="text" name="nom" required />
+              </label>
+              <label>
+                Centre educatiu
+                <input type="text" name="centre" required />
+              </label>
+              <label>
+                Localitat
+                <input type="text" name="localitat" required />
+              </label>
+              <label>
+                Correu
+                <input type="email" name="email" placeholder="nom@correu.com" required />
+              </label>
+              <label>
+                Perfil de participació
+                <select name="rol" required>
+                  <option value="" selected>Selecciona el teu rol</option>
+                  <option value="Assistent">Assistent</option>
+                  <option value="Tallerista">Tallerista</option>
+                  <option value="Presentació d’experiències">Presentació d’experiències</option>
+                  <option value="Organització">Organització</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="workshops">
+              <div class="workshops__header">
+                <h2>Selecció de tallers</h2>
+                <p>Hi ha 2 franges disponibles i només pots escollir 1 taller en total.</p>
+              </div>
+              <div id="workshop-container" class="workshops__grid"></div>
+            </div>
+
+            <div class="actions">
+              <button id="confirm-button" type="submit" disabled>Confirmar inscripció</button>
+              <p id="form-message" class="form-message" role="status"></p>
+            </div>
+          </form>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <img class="site-footer__logo" src="Logos 40.png" alt="Logos institucionals" />
+      </footer>
+    </div>
+
+    <div id="taller-modal" class="modal" aria-hidden="true">
+      <div class="modal__backdrop" data-close-modal="true"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button id="modal-close" class="modal__close" type="button" aria-label="Tancar">×</button>
+        <h2 id="modal-title" class="modal__title"></h2>
+
+        <section class="modal__block">
+          <h3>Imparteix</h3>
+          <p id="modal-imparteix" class="modal__text"></p>
+          <div class="modal__people-photos">
+            <img id="modal-foto-1" class="modal__person-photo" alt="Foto ponent 1" />
+            <img id="modal-foto-2" class="modal__person-photo" alt="Foto ponent 2" />
+          </div>
+        </section>
+
+        <section class="modal__block modal__tech-layout">
+          <div>
+            <h3>Dispositiu / tecnologia</h3>
+            <p id="modal-dispositiu" class="modal__text"></p>
+          </div>
+          <img id="modal-dispositiu-img" class="modal__tech-image" alt="Imatge del dispositiu o tecnologia" />
+        </section>
+
+        <section class="modal__block">
+          <h3>Descripció del taller</h3>
+          <p id="modal-descripcio" class="modal__text"></p>
+        </section>
+
+        <section class="modal__block">
+          <h3>Material necessari</h3>
+          <p id="modal-material" class="modal__text"></p>
+        </section>
+
+        <section class="modal__block">
+          <h3>Etapa educativa</h3>
+          <p id="modal-etapa" class="modal__text"></p>
+        </section>
+      </div>
+    </div>
+
+    <script src="app.js?v=10"></script>
+  </body>
+</html>
+
+
+
