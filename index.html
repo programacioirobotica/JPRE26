@@ -1,9 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="ca">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>XVIII Jornada de Programació i Robòtica Educatives</title>
+    <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="formulario-agenda.css" />
   </head>
   <body>
@@ -12,18 +13,18 @@
         <div class="hero__brand">
           <img class="hero__logo" src="logo.png" alt="Logo de la jornada" />
           <div>
-            <p class="hero__tag">#JPRE26</p>
+            <p class="hero__tag">JPRE</p>
             <h1>XVIII Jornada de Programació i Robòtica Educatives</h1>
-            <p class="hero__subtitle">Formulari d’inscripció en línia</p>
+            <p class="hero__subtitle">Formulari d'inscripció</p>
           </div>
         </div>
         <div class="hero__panel">
-          <p>
-            Emplena les teves dades, escull <strong>un taller</strong> d'alguna de les franges
-          i confirma la inscripció.
-          </p>
+          <p class="hero__panel-date">16 MAIG</p>
           <ul class="hero__rules">
-            </ul>
+            <li>Completa les teves dades personals.</li>
+            <li>Escull un únic taller d'una de les dues franges.</li>
+            <li>Confirma la inscripció per reservar la plaça.</li>
+          </ul>
           <p class="hero__support">
             Necessites ajuda? Escriu a
             <a href="mailto:programacioirobotica@xtec.cat">programacioirobotica@xtec.cat</a>.
@@ -122,10 +123,15 @@
           <h3>Etapa educativa</h3>
           <p id="modal-etapa" class="modal__text"></p>
         </section>
+
+        <section class="modal__block">
+          <h3>Aula</h3>
+          <p id="modal-aula" class="modal__text"></p>
+        </section>
       </div>
     </div>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
   </body>
 </html>
 
