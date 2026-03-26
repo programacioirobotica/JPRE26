@@ -538,7 +538,34 @@ select option {
 }
 
 .form-message {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
   color: var(--agenda-muted);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.form-message:empty {
+  display: none;
+}
+
+.form-message--error {
+  background: rgba(125, 32, 24, 0.36);
+  border: 1px solid rgba(255, 167, 148, 0.34);
+  color: #ffe0d6;
+}
+
+.form-message--warning {
+  background: rgba(117, 86, 28, 0.3);
+  border: 1px solid rgba(245, 202, 120, 0.28);
+  color: #ffe7ab;
+}
+
+.form-message--success {
+  background: rgba(29, 96, 63, 0.32);
+  border: 1px solid rgba(128, 216, 174, 0.28);
+  color: #dbffe9;
 }
 
 .site-footer {
