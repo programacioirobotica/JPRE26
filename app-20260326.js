@@ -1,5 +1,5 @@
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxQaAIj0boX1FKs1wSCJMUeHAcNtFoj50MAiSi36Na6cnwnxut29TPxoPspCzvkb0sd/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyIJA6Xg_JfJiHuK_obIjics_BjNvIfJqDFwR8gDqOUeC751cFoW7v2ddeF0QDsLE4/exec";
 
 function cacheNonce() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -69,9 +69,11 @@ const state = {
   emailChecking: false,
   emailExists: false,
   emailChecked: "",
+  submitting: false,
 };
 
 const container = document.getElementById("workshop-container");
+const workshopsSection = container.closest(".workshops");
 const form = document.getElementById("registration-form");
 const confirmButton = document.getElementById("confirm-button");
 const message = document.getElementById("form-message");
@@ -90,6 +92,15 @@ const modalEtapa = document.getElementById("modal-etapa");
 const modalAula = document.getElementById("modal-aula");
 
 let emailCheckTimer = null;
+let pendingSubmit = null;
+
+function selectedRole() {
+  return String(form.elements.rol.value || "").trim();
+}
+
+function isOrganizationRole() {
+  return selectedRole().toLowerCase() === "organització";
+}
 
 function limitToTwoFranges(data) {
   return {
@@ -257,6 +268,13 @@ function closeWorkshopInfo() {
 function render() {
   sanitizeSelected();
   container.innerHTML = "";
+  workshopsSection.classList.toggle("is-hidden", isOrganizationRole());
+
+  if (isOrganizationRole()) {
+    validateForm();
+    return;
+  }
+
   state.data.franges.forEach((franja, franjaIndex) => {
     const franjaEl = document.createElement("section");
     franjaEl.className = "franja";
@@ -406,18 +424,22 @@ function validateForm() {
     emailOk &&
     rolOk;
 
-  const selectionsOk = Object.keys(state.selected).length >= 1;
+  const selectionsOk = isOrganizationRole() || Object.keys(state.selected).length >= 1;
 
-  if (state.emailChecking) {
+  if (state.submitting) {
+    message.textContent = "Enviant inscripció...";
+  } else if (state.emailChecking) {
     message.textContent = "Comprovant si ja estàs inscrit...";
-  }
-
-  if (state.emailExists) {
+  } else if (state.emailExists) {
     message.textContent = "Aquest correu ja està inscrit.";
+  } else if (isOrganizationRole()) {
+    message.textContent = "Perfil Organització: inscripció directa sense seleccionar taller.";
+  } else {
+    message.textContent = "";
   }
 
   confirmButton.disabled =
-    !(requiredFilled && selectionsOk) || state.emailChecking || state.emailExists;
+    !(requiredFilled && selectionsOk) || state.emailChecking || state.emailExists || state.submitting;
 }
 
 function scheduleEmailCheck() {
@@ -542,30 +564,80 @@ function postForm(payload) {
     document.body.appendChild(iframe);
   }
 
-  const tempForm = document.createElement("form");
-  tempForm.method = "POST";
-  tempForm.action = WEB_APP_URL;
-  tempForm.target = iframeName;
+  if (pendingSubmit) {
+    pendingSubmit.reject(new Error("Ja hi ha una inscripció en curs."));
+    clearTimeout(pendingSubmit.timeoutId);
+    pendingSubmit = null;
+  }
 
-  const input = document.createElement("input");
-  input.type = "hidden";
-  input.name = "payload";
-  input.value = JSON.stringify(payload);
+  return new Promise((resolve, reject) => {
+    const requestId = cacheNonce();
+    const tempForm = document.createElement("form");
+    tempForm.method = "POST";
+    tempForm.action = WEB_APP_URL;
+    tempForm.target = iframeName;
 
-  tempForm.appendChild(input);
-  document.body.appendChild(tempForm);
-  tempForm.submit();
-  tempForm.remove();
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "payload";
+    input.value = JSON.stringify({ ...payload, requestId });
+
+    tempForm.appendChild(input);
+    document.body.appendChild(tempForm);
+
+    pendingSubmit = {
+      requestId,
+      resolve,
+      reject,
+      timeoutId: setTimeout(() => {
+        pendingSubmit = null;
+        reject(new Error("El servidor no ha confirmat la inscripció. Torna-ho a provar."));
+      }, 15000),
+    };
+
+    tempForm.submit();
+    tempForm.remove();
+  });
+}
+
+function handleSubmitMessage(event) {
+  const data = event.data;
+  if (!pendingSubmit || !data || data.type !== "jpre-submit-result") {
+    return;
+  }
+  if (String(data.requestId || "") !== pendingSubmit.requestId) {
+    return;
+  }
+
+  const { resolve, reject, timeoutId } = pendingSubmit;
+  pendingSubmit = null;
+  clearTimeout(timeoutId);
+
+  if (data.ok) {
+    resolve(data);
+    return;
+  }
+
+  reject(new Error(data.message || "No s'ha pogut completar la inscripció."));
 }
 
 form.addEventListener("input", (event) => {
   if (event.target.name === "email") {
     scheduleEmailCheck();
   }
+  if (event.target.name === "rol") {
+    if (isOrganizationRole()) {
+      state.selected = {};
+    }
+    if (state.data) {
+      render();
+      return;
+    }
+  }
   validateForm();
 });
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
   message.textContent = "";
 
@@ -584,18 +656,25 @@ form.addEventListener("submit", (event) => {
   };
 
   try {
-    confirmButton.disabled = true;
-    postForm(payload);
-    message.textContent =
-      "Registre correcte. Gràcies per participar en la #JPRE26.";
+    state.submitting = true;
+    validateForm();
+    await postForm(payload);
+    message.textContent = "Registre correcte. Gràcies per participar en la #JPRE26.";
     form.reset();
     state.selected = {};
     state.emailChecked = "";
     state.emailExists = false;
+    if (state.data) {
+      render();
+    }
     setTimeout(loadData, 1200);
   } catch (error) {
-    message.textContent = "Error en enviar la inscripció. Torna-ho a provar.";
+    message.textContent =
+      error && error.message
+        ? error.message
+        : "Error en enviar la inscripció. Torna-ho a provar.";
   } finally {
+    state.submitting = false;
     validateForm();
   }
 });
@@ -614,6 +693,8 @@ document.addEventListener("keydown", (event) => {
     closeWorkshopInfo();
   }
 });
+
+window.addEventListener("message", handleSubmitMessage);
 
 loadData();
 
