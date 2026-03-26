@@ -243,7 +243,7 @@ select option {
   margin-bottom: 10px;
   padding: 6px 10px;
   border-radius: 999px;
-  background-color: red;
+  background: #d56b4c;
   color: #ffd8c9;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.78rem;
