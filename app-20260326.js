@@ -70,6 +70,7 @@ const state = {
   emailExists: false,
   emailChecked: "",
   submitting: false,
+  loadError: false,
 };
 
 const container = document.getElementById("workshop-container");
@@ -110,6 +111,10 @@ function limitToTwoFranges(data) {
 }
 
 function sanitizeSelected() {
+  if (!state.data || !Array.isArray(state.data.franges)) {
+    state.selected = {};
+    return;
+  }
   const validFranges = new Set(state.data.franges.map((franja) => franja.nom));
   const entries = Object.entries(state.selected).filter(([franja]) =>
     validFranges.has(franja)
@@ -266,6 +271,13 @@ function closeWorkshopInfo() {
 }
 
 function render() {
+  if (!state.data || !Array.isArray(state.data.franges)) {
+    container.innerHTML = "";
+    workshopsSection.classList.remove("is-hidden");
+    validateForm();
+    return;
+  }
+
   sanitizeSelected();
   container.innerHTML = "";
   workshopsSection.classList.toggle("is-hidden", isOrganizationRole());
@@ -424,9 +436,13 @@ function validateForm() {
     emailOk &&
     rolOk;
 
+  const dataReady = Boolean(state.data && Array.isArray(state.data.franges));
   const selectionsOk = isOrganizationRole() || Object.keys(state.selected).length >= 1;
 
-  if (state.submitting) {
+  if (state.loadError) {
+    message.textContent =
+      "No s'han pogut carregar els tallers reals. Prova en finestra d'incògnit o en un altre navegador.";
+  } else if (state.submitting) {
     message.textContent = "Enviant inscripció...";
   } else if (state.emailChecking) {
     message.textContent = "Comprovant si ja estàs inscrit...";
@@ -439,7 +455,11 @@ function validateForm() {
   }
 
   confirmButton.disabled =
-    !(requiredFilled && selectionsOk) || state.emailChecking || state.emailExists || state.submitting;
+    !(requiredFilled && selectionsOk && dataReady) ||
+    state.emailChecking ||
+    state.emailExists ||
+    state.submitting ||
+    state.loadError;
 }
 
 function scheduleEmailCheck() {
@@ -499,13 +519,15 @@ function checkEmailExists(email) {
 
 function loadData() {
   if (WEB_APP_URL === "PENDENT_WEB_APP_URL") {
-    state.data = limitToTwoFranges(mockData);
+    state.data = null;
+    state.loadError = true;
     message.textContent =
-      "Mode prova: dades simulades. Actualitza l'URL del Web App per connectar amb Sheets.";
+      "Falta configurar el Web App. Actualitza l'URL abans de publicar el formulari.";
     render();
     return;
   }
 
+  state.loadError = false;
   message.textContent = "Carregant places disponibles...";
 
   const nonce = cacheNonce();
@@ -516,10 +538,12 @@ function loadData() {
     if (!data || !data.franges) {
       message.textContent =
         "Resposta no vàlida del servidor. Comprova el desplegament.";
-      state.data = limitToTwoFranges(mockData);
+      state.data = null;
+      state.loadError = true;
       render();
     } else {
       state.data = limitToTwoFranges(data);
+      state.loadError = false;
       message.textContent = "";
       render();
     }
@@ -533,8 +557,9 @@ function loadData() {
   script.src = `${WEB_APP_URL}${sep}callback=${callbackName}&_ts=${nonce}`;
   script.onerror = () => {
     message.textContent =
-      "No s'han pogut carregar els tallers. Torna-ho a provar més tard.";
-    state.data = limitToTwoFranges(mockData);
+      "No s'han pogut carregar els tallers reals. Prova en finestra d'incògnit o en un altre navegador.";
+    state.data = null;
+    state.loadError = true;
     render();
     if (timeoutId) clearTimeout(timeoutId);
     delete window[callbackName];
@@ -543,8 +568,9 @@ function loadData() {
 
   timeoutId = setTimeout(() => {
     message.textContent =
-      "El servidor no ha respost. Recarrega la pàgina o revisa el desplegament.";
-    state.data = limitToTwoFranges(mockData);
+      "El servidor no ha respost. Prova en finestra d'incògnit o en un altre navegador.";
+    state.data = null;
+    state.loadError = true;
     render();
     delete window[callbackName];
     script.remove();
