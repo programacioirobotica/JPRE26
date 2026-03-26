@@ -78,6 +78,7 @@ const workshopsSection = container.closest(".workshops");
 const form = document.getElementById("registration-form");
 const confirmButton = document.getElementById("confirm-button");
 const message = document.getElementById("form-message");
+const actionsSection = confirmButton.closest(".actions");
 const modal = document.getElementById("taller-modal");
 const modalCloseButton = document.getElementById("modal-close");
 const modalTitle = document.getElementById("modal-title");
@@ -320,6 +321,7 @@ function render() {
   if (!state.data || !Array.isArray(state.data.franges)) {
     container.innerHTML = "";
     workshopsSection.classList.toggle("is-hidden", state.loadError);
+    actionsSection.classList.toggle("is-hidden", state.loadError);
     toggleLoadErrorPanel(state.loadError);
     validateForm();
     return;
@@ -328,6 +330,7 @@ function render() {
   sanitizeSelected();
   container.innerHTML = "";
   toggleLoadErrorPanel(false);
+  actionsSection.classList.remove("is-hidden");
   workshopsSection.classList.toggle("is-hidden", isOrganizationRole());
 
   if (isOrganizationRole()) {
