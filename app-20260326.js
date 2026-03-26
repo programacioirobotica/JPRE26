@@ -319,7 +319,7 @@ function toggleLoadErrorPanel(show) {
 function render() {
   if (!state.data || !Array.isArray(state.data.franges)) {
     container.innerHTML = "";
-    workshopsSection.classList.remove("is-hidden");
+    workshopsSection.classList.toggle("is-hidden", state.loadError);
     toggleLoadErrorPanel(state.loadError);
     validateForm();
     return;
