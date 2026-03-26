@@ -267,6 +267,18 @@ select option {
   line-height: 1.6;
 }
 
+.load-error-panel__highlight {
+  display: inline-block;
+  margin: 0 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 244, 238, 0.16);
+  color: #fff4ee;
+  font-size: 1.02em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
 .load-error-panel__actions {
   margin-top: 18px;
 }
