@@ -272,7 +272,7 @@ select option {
   margin: 0 3px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 244, 238, 0.16);
+  background: rgba(255, 244, 238, 0.25);
   color: #fff4ee;
   font-size: 1.02em;
   font-weight: 700;
@@ -292,7 +292,7 @@ select option {
   background: #fff4ee;
   color: #5b2218;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 0.92rem;
+  font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
