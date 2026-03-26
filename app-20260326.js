@@ -490,15 +490,22 @@ function validateForm() {
   const dataReady = Boolean(state.data && Array.isArray(state.data.franges));
   const selectionsOk = isOrganizationRole() || Object.keys(state.selected).length >= 1;
 
+  message.classList.remove("form-message--error", "form-message--warning", "form-message--success");
+
   if (state.loadError) {
     message.textContent =
       "No s'han pogut carregar els tallers reals. Prova en finestra d'incògnit o en un altre navegador.";
+    message.classList.add("form-message--error");
   } else if (state.submitting) {
     message.textContent = "Enviant inscripció...";
+    message.classList.add("form-message--warning");
   } else if (state.emailChecking) {
     message.textContent = "Comprovant si ja estàs inscrit...";
+    message.classList.add("form-message--warning");
   } else if (state.emailExists) {
-    message.textContent = "Aquest correu ja està inscrit.";
+    message.textContent =
+      "Aquest correu ja està inscrit. Si vols canviar alguna dada o la teva inscripció, contacta amb l'organització.";
+    message.classList.add("form-message--error");
   } else if (isOrganizationRole()) {
     message.textContent = "Perfil Organització: inscripció directa sense seleccionar taller.";
   } else {
@@ -717,9 +724,11 @@ form.addEventListener("input", (event) => {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   message.textContent = "";
+  message.classList.remove("form-message--error", "form-message--warning", "form-message--success");
 
   if (confirmButton.disabled) {
     message.textContent = "Revisa les dades abans de confirmar.";
+    message.classList.add("form-message--warning");
     return;
   }
 
@@ -737,6 +746,8 @@ form.addEventListener("submit", async (event) => {
     validateForm();
     await postForm(payload);
     message.textContent = "Registre correcte. Gràcies per participar en la #JPRE26.";
+    message.classList.remove("form-message--error", "form-message--warning");
+    message.classList.add("form-message--success");
     form.reset();
     state.selected = {};
     state.emailChecked = "";
@@ -750,6 +761,8 @@ form.addEventListener("submit", async (event) => {
       error && error.message
         ? error.message
         : "Error en enviar la inscripció. Torna-ho a provar.";
+    message.classList.remove("form-message--success", "form-message--warning");
+    message.classList.add("form-message--error");
   } finally {
     state.submitting = false;
     validateForm();
