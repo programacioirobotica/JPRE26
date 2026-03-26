@@ -199,13 +199,14 @@ select {
   border: 1px solid rgba(255, 234, 224, 0.18);
   border-radius: 14px;
   background: rgba(92, 46, 32, 0.2);
-  color: #fff6f1;
+  color: #111111;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  caret-color: #111111;
 }
 
 input::placeholder {
-  color: rgba(255, 236, 227, 0.66);
+  color: rgba(17, 17, 17, 0.7);
 }
 
 input:focus,
@@ -216,6 +217,10 @@ select:focus {
 
 select option {
   color: #101623;
+}
+
+.is-hidden {
+  display: none !important;
 }
 
 .workshops {
