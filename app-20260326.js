@@ -94,6 +94,7 @@ const modalAula = document.getElementById("modal-aula");
 
 let emailCheckTimer = null;
 let pendingSubmit = null;
+let loadErrorPanel = null;
 
 function selectedRole() {
   return String(form.elements.rol.value || "").trim();
@@ -270,16 +271,58 @@ function closeWorkshopInfo() {
   document.body.style.overflow = "";
 }
 
+function getLoadErrorPanel() {
+  if (loadErrorPanel) {
+    return loadErrorPanel;
+  }
+
+  const panel = document.createElement("div");
+  panel.className = "load-error-panel is-hidden";
+  panel.innerHTML = `
+    <div class="load-error-panel__badge">Atencio</div>
+    <h3 class="load-error-panel__title">Els tallers no s'han carregat correctament</h3>
+    <p class="load-error-panel__text">
+      Si veus aquest avís, no continuïs amb aquesta finestra. Obre el formulari en una
+      finestra d'incògnit per carregar les dades reals.
+    </p>
+    <div class="load-error-panel__actions">
+      <button type="button" class="load-error-panel__button">
+        Obrir el formulari en una finestra nova
+      </button>
+    </div>
+  `;
+
+  const actionButton = panel.querySelector(".load-error-panel__button");
+  actionButton.addEventListener("click", () => {
+    const url = window.location.href;
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      window.location.href = url;
+    }
+  });
+
+  workshopsSection.parentNode.insertBefore(panel, workshopsSection);
+  loadErrorPanel = panel;
+  return loadErrorPanel;
+}
+
+function toggleLoadErrorPanel(show) {
+  const panel = getLoadErrorPanel();
+  panel.classList.toggle("is-hidden", !show);
+}
+
 function render() {
   if (!state.data || !Array.isArray(state.data.franges)) {
     container.innerHTML = "";
     workshopsSection.classList.remove("is-hidden");
+    toggleLoadErrorPanel(state.loadError);
     validateForm();
     return;
   }
 
   sanitizeSelected();
   container.innerHTML = "";
+  toggleLoadErrorPanel(false);
   workshopsSection.classList.toggle("is-hidden", isOrganizationRole());
 
   if (isOrganizationRole()) {
