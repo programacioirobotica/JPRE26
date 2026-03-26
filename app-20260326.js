@@ -279,25 +279,30 @@ function getLoadErrorPanel() {
   const panel = document.createElement("div");
   panel.className = "load-error-panel is-hidden";
   panel.innerHTML = `
-    <div class="load-error-panel__badge">Atencio</div>
+    <div class="load-error-panel__badge">Atenció</div>
     <h3 class="load-error-panel__title">Els tallers no s'han carregat correctament</h3>
     <p class="load-error-panel__text">
       Si veus aquest avís, no continuïs amb aquesta finestra. Obre el formulari en una
-      finestra d'incògnit per carregar les dades reals.
+      <strong class="load-error-panel__highlight">finestra d'incògnit</strong> per carregar les dades reals.
     </p>
     <div class="load-error-panel__actions">
       <button type="button" class="load-error-panel__button">
-        Obrir el formulari en una finestra nova
+        Copia la URL
       </button>
     </div>
   `;
 
   const actionButton = panel.querySelector(".load-error-panel__button");
-  actionButton.addEventListener("click", () => {
+  actionButton.addEventListener("click", async () => {
     const url = window.location.href;
-    const opened = window.open(url, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      window.location.href = url;
+    try {
+      await navigator.clipboard.writeText(url);
+      actionButton.textContent = "URL copiada";
+      setTimeout(() => {
+        actionButton.textContent = "Copia la URL";
+      }, 1800);
+    } catch (error) {
+      window.prompt("Copia aquesta URL i obre-la en una finestra d'incògnit:", url);
     }
   });
 
