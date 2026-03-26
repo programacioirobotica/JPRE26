@@ -284,7 +284,7 @@ function getLoadErrorPanel() {
     <h3 class="load-error-panel__title">Els tallers no s'han carregat correctament</h3>
     <p class="load-error-panel__text">
       Si veus aquest avís, no continuïs amb aquesta finestra. Obre el formulari en una
-      <strong class="load-error-panel__highlight">finestra d'incògnit</strong> per carregar les dades reals.
+      <strong class="load-error-panel__highlight">finestra d'incògnit</strong>.
     </p>
     <div class="load-error-panel__actions">
       <button type="button" class="load-error-panel__button">
