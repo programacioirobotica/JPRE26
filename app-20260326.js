@@ -1,5 +1,5 @@
-﻿
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwnlk1OhghSo_PCC5xXZnqKqc7TVUZFJrexK-PxSCxp0ODWSA0ebfV0XKThSxDFFi7h/exec";
+
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxQaAIj0boX1FKs1wSCJMUeHAcNtFoj50MAiSi36Na6cnwnxut29TPxoPspCzvkb0sd/exec";
 
 function cacheNonce() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -33,6 +33,7 @@ const mockData = {
           materialNecessari:
             "Material necessari (ordinador, compte, sensors, etc.).",
           etapaEducativa: "Etapa educativa del taller",
+          aula: "Aula",
         };
       }),
     },
@@ -55,6 +56,7 @@ const mockData = {
           materialNecessari:
             "Material necessari (ordinador, compte, sensors, etc.).",
           etapaEducativa: "Etapa educativa del taller",
+          aula: "Aula",
         };
       }),
     },
@@ -85,6 +87,7 @@ const modalDispositiuImg = document.getElementById("modal-dispositiu-img");
 const modalDescripcio = document.getElementById("modal-descripcio");
 const modalMaterial = document.getElementById("modal-material");
 const modalEtapa = document.getElementById("modal-etapa");
+const modalAula = document.getElementById("modal-aula");
 
 let emailCheckTimer = null;
 
@@ -120,6 +123,20 @@ function availabilityClass(available, total) {
 function normalizedText(value, fallback = "No informat") {
   const text = String(value || "").trim();
   return text || fallback;
+}
+
+function franjaLabel(franjaNom, index) {
+  const normalized = String(franjaNom || "").toLowerCase();
+  if (normalized.includes("1a")) return "09:30  Tallers - 1a Franja";
+  if (normalized.includes("2a")) return "11:30  Tallers - 2a Franja";
+  return `${String(index + 1).padStart(2, "0")}:00  Tallers`;
+}
+
+function franjaTimeRange(franjaNom, index) {
+  const normalized = String(franjaNom || "").toLowerCase();
+  if (normalized.includes("1a")) return "09:30-11:00";
+  if (normalized.includes("2a")) return "11:30-13:00";
+  return `${String(9 + index * 2).padStart(2, "0")}:00-${String(10 + index * 2).padStart(2, "0")}:30`;
 }
 
 function isGoogleDriveUrl(url) {
@@ -213,6 +230,7 @@ function openWorkshopInfo(taller) {
   modalDescripcio.textContent = normalizedText(taller.descripcio);
   modalMaterial.textContent = normalizedText(taller.materialNecessari);
   modalEtapa.textContent = normalizedText(taller.etapaEducativa);
+  modalAula.textContent = normalizedText(taller.aula);
 
   const hasFoto1 = setModalImage(modalFoto1, taller.foto1Url, "Foto ponent 1", true);
   const hasFoto2 = setModalImage(modalFoto2, taller.foto2Url, "Foto ponent 2", true);
@@ -239,13 +257,13 @@ function closeWorkshopInfo() {
 function render() {
   sanitizeSelected();
   container.innerHTML = "";
-  state.data.franges.forEach((franja) => {
+  state.data.franges.forEach((franja, franjaIndex) => {
     const franjaEl = document.createElement("section");
     franjaEl.className = "franja";
 
     const title = document.createElement("h3");
     title.className = "franja__title";
-    title.textContent = franja.nom;
+    title.textContent = franjaLabel(franja.nom, franjaIndex);
     franjaEl.appendChild(title);
 
     const grid = document.createElement("div");
@@ -269,6 +287,10 @@ function render() {
 
       const header = document.createElement("div");
       header.className = "taller-card__header";
+
+      const meta = document.createElement("div");
+      meta.className = "taller-card__meta";
+      meta.textContent = franjaTimeRange(franja.nom, franjaIndex);
 
       const name = document.createElement("div");
       name.className = "taller-name";
@@ -318,8 +340,17 @@ function render() {
       progress.appendChild(progressTrack);
       progress.appendChild(progressLabel);
 
-      header.appendChild(name);
-      header.appendChild(infoButton);
+      const topRow = document.createElement("div");
+      topRow.className = "taller-card__topline";
+      topRow.appendChild(meta);
+
+      const titleWrap = document.createElement("div");
+      titleWrap.className = "taller-card__titlewrap";
+      titleWrap.appendChild(name);
+      titleWrap.appendChild(infoButton);
+
+      header.appendChild(topRow);
+      header.appendChild(titleWrap);
       card.appendChild(header);
       card.appendChild(availability);
       card.appendChild(progress);
