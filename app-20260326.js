@@ -744,10 +744,15 @@ form.addEventListener("submit", async (event) => {
   try {
     state.submitting = true;
     validateForm();
-    await postForm(payload);
-    message.textContent = "Registre correcte. Gràcies per participar en la #JPRE26.";
+    const result = await postForm(payload);
+    message.textContent =
+      result && result.message
+        ? result.message
+        : "Registre correcte. Gràcies per participar en la #JPRE26.";
     message.classList.remove("form-message--error", "form-message--warning");
-    message.classList.add("form-message--success");
+    message.classList.add(
+      result && result.emailSent === false ? "form-message--warning" : "form-message--success"
+    );
     form.reset();
     state.selected = {};
     state.emailChecked = "";
