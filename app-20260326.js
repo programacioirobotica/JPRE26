@@ -79,6 +79,8 @@ const form = document.getElementById("registration-form");
 const confirmButton = document.getElementById("confirm-button");
 const message = document.getElementById("form-message");
 const actionsSection = confirmButton.closest(".actions");
+const skipWorkshopOption = document.getElementById("skip-workshop-option");
+const skipWorkshopCheckbox = document.getElementById("skip-workshop-checkbox");
 const modal = document.getElementById("taller-modal");
 const modalCloseButton = document.getElementById("modal-close");
 const modalTitle = document.getElementById("modal-title");
@@ -101,8 +103,24 @@ function selectedRole() {
   return String(form.elements.rol.value || "").trim();
 }
 
-function isOrganizationRole() {
-  return selectedRole().toLowerCase() === "organització";
+function canSkipWorkshopSelection() {
+  const role = selectedRole().toLowerCase();
+  return role === "tallerista" || role === "presentació d’experiències";
+}
+
+function isSkippingWorkshopSelection() {
+  return Boolean(skipWorkshopCheckbox?.checked) && canSkipWorkshopSelection();
+}
+
+function syncSkipWorkshopOption() {
+  if (!skipWorkshopOption || !skipWorkshopCheckbox) return;
+
+  const canSkip = canSkipWorkshopSelection();
+  skipWorkshopOption.classList.toggle("is-hidden", !canSkip);
+
+  if (!canSkip) {
+    skipWorkshopCheckbox.checked = false;
+  }
 }
 
 function limitToTwoFranges(data) {
@@ -284,7 +302,7 @@ function getLoadErrorPanel() {
     <h3 class="load-error-panel__title">Els tallers no s'han carregat correctament</h3>
     <p class="load-error-panel__text">
       Si veus aquest avís, no continuïs amb aquesta finestra. Obre el formulari en una
-      <strong class="load-error-panel__highlight">finestra d'incògnit</strong>.
+      <strong class="load-error-panel__highlight">finestra d'incògnit</strong> per carregar les dades reals.
     </p>
     <div class="load-error-panel__actions">
       <button type="button" class="load-error-panel__button">
@@ -318,6 +336,8 @@ function toggleLoadErrorPanel(show) {
 }
 
 function render() {
+  syncSkipWorkshopOption();
+
   if (!state.data || !Array.isArray(state.data.franges)) {
     container.innerHTML = "";
     workshopsSection.classList.toggle("is-hidden", state.loadError);
@@ -331,12 +351,7 @@ function render() {
   container.innerHTML = "";
   toggleLoadErrorPanel(false);
   actionsSection.classList.remove("is-hidden");
-  workshopsSection.classList.toggle("is-hidden", isOrganizationRole());
-
-  if (isOrganizationRole()) {
-    validateForm();
-    return;
-  }
+  workshopsSection.classList.remove("is-hidden");
 
   state.data.franges.forEach((franja, franjaIndex) => {
     const franjaEl = document.createElement("section");
@@ -451,6 +466,10 @@ function render() {
 function handleSelect(franjaNom, taller) {
   if (taller.placesDisponibles <= 0) return;
 
+  if (skipWorkshopCheckbox) {
+    skipWorkshopCheckbox.checked = false;
+  }
+
   const alreadySelected = state.selected[franjaNom] === taller.id;
   if (alreadySelected) {
     delete state.selected[franjaNom];
@@ -488,7 +507,8 @@ function validateForm() {
     rolOk;
 
   const dataReady = Boolean(state.data && Array.isArray(state.data.franges));
-  const selectionsOk = isOrganizationRole() || Object.keys(state.selected).length >= 1;
+  const selectionsOk =
+    Object.keys(state.selected).length >= 1 || isSkippingWorkshopSelection();
 
   message.classList.remove("form-message--error", "form-message--warning", "form-message--success");
 
@@ -506,8 +526,9 @@ function validateForm() {
     message.textContent =
       "Aquest correu ja està inscrit. Si vols canviar alguna dada o la teva inscripció, contacta amb l'organització.";
     message.classList.add("form-message--error");
-  } else if (isOrganizationRole()) {
-    message.textContent = "Perfil Organització: inscripció directa sense seleccionar taller.";
+  } else if (canSkipWorkshopSelection() && !isSkippingWorkshopSelection() && !Object.keys(state.selected).length) {
+    message.textContent = "Pots escollir 1 taller o marcar l'opció \"No faré cap taller\".";
+    message.classList.add("form-message--warning");
   } else {
     message.textContent = "";
   }
@@ -709,17 +730,22 @@ form.addEventListener("input", (event) => {
   if (event.target.name === "email") {
     scheduleEmailCheck();
   }
-  if (event.target.name === "rol") {
-    if (isOrganizationRole()) {
-      state.selected = {};
-    }
-    if (state.data) {
-      render();
-      return;
-    }
+  if (event.target.name === "rol" && state.data) {
+    syncSkipWorkshopOption();
+    render();
+    return;
   }
   validateForm();
 });
+
+if (skipWorkshopCheckbox) {
+  skipWorkshopCheckbox.addEventListener("change", () => {
+    if (skipWorkshopCheckbox.checked) {
+      state.selected = {};
+    }
+    render();
+  });
+}
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -738,6 +764,7 @@ form.addEventListener("submit", async (event) => {
     localitat: form.elements.localitat.value.trim(),
     email: form.elements.email.value.trim(),
     rol: form.elements.rol.value.trim(),
+    senseTaller: isSkippingWorkshopSelection(),
     seleccions: getSelections(),
   };
 
@@ -757,6 +784,9 @@ form.addEventListener("submit", async (event) => {
     state.selected = {};
     state.emailChecked = "";
     state.emailExists = false;
+    if (skipWorkshopCheckbox) {
+      skipWorkshopCheckbox.checked = false;
+    }
     if (state.data) {
       render();
     }
