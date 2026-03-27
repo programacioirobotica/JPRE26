@@ -243,10 +243,10 @@ select option {
   margin-bottom: 10px;
   padding: 6px 10px;
   border-radius: 999px;
-  background-color: #d32f2f;
+  background: rgba(255, 214, 204, 0.14);
   color: #ffd8c9;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 1rem;
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -272,7 +272,7 @@ select option {
   margin: 0 3px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 244, 238, 0.25);
+  background: rgba(255, 244, 238, 0.16);
   color: #fff4ee;
   font-size: 1.02em;
   font-weight: 700;
@@ -292,7 +292,7 @@ select option {
   background: #fff4ee;
   color: #5b2218;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 1.1rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -321,6 +321,32 @@ select option {
   margin: 0;
   color: var(--agenda-muted);
   font-size: 1rem;
+}
+
+.skip-workshop {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  border: 1px solid var(--agenda-border);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top left, rgba(196, 109, 82, 0.08), transparent 42%),
+    linear-gradient(180deg, rgba(22, 30, 45, 0.96), rgba(16, 22, 34, 0.98));
+  color: var(--agenda-text);
+  font-weight: 600;
+}
+
+.skip-workshop input {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--agenda-accent);
+  box-shadow: none;
 }
 
 .workshops__grid {
@@ -675,6 +701,10 @@ select option {
   .workshops,
   .actions {
     padding-left: 0;
+  }
+
+  .skip-workshop {
+    width: 100%;
   }
 
   .franja__title::before {
