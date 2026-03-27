@@ -529,6 +529,8 @@ function validateForm() {
   } else if (canSkipWorkshopSelection() && !isSkippingWorkshopSelection() && !Object.keys(state.selected).length) {
     message.textContent = "Pots escollir 1 taller o marcar l'opció \"No faré cap taller\".";
     message.classList.add("form-message--warning");
+  } else if (message.classList.contains("form-message--success")) {
+    return;
   } else {
     message.textContent = "";
   }
