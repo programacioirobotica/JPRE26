@@ -98,6 +98,7 @@ const modalAula = document.getElementById("modal-aula");
 let emailCheckTimer = null;
 let pendingSubmit = null;
 let loadErrorPanel = null;
+let successMessageUntil = 0;
 
 function selectedRole() {
   return String(form.elements.rol.value || "").trim();
@@ -496,7 +497,14 @@ function getSelections() {
 }
 
 function validateForm() {
-  const hadSuccessMessage = message.classList.contains("form-message--success");
+  if (Date.now() < successMessageUntil) {
+    message.textContent = "Enviat correctament.";
+    message.classList.remove("form-message--error", "form-message--warning");
+    message.classList.add("form-message--success");
+    confirmButton.disabled = true;
+    return;
+  }
+
   const email = form.elements.email.value.trim();
   const emailOk = Boolean(email);
   const rolOk = form.elements.rol.value.trim();
@@ -530,10 +538,6 @@ function validateForm() {
   } else if (canSkipWorkshopSelection() && !isSkippingWorkshopSelection() && !Object.keys(state.selected).length) {
     message.textContent = "Pots escollir 1 taller o marcar l'opció \"No faré cap taller\".";
     message.classList.add("form-message--warning");
-  } else if (hadSuccessMessage) {
-    message.textContent = "Enviat correctament.";
-    message.classList.add("form-message--success");
-    return;
   } else {
     message.textContent = "";
   }
@@ -777,6 +781,8 @@ form.addEventListener("submit", async (event) => {
     state.submitting = true;
     validateForm();
     const result = await postForm(payload);
+    state.submitting = false;
+    successMessageUntil = Date.now() + 1200;
     message.textContent = "Enviat correctament.";
     message.classList.remove("form-message--error", "form-message--warning");
     message.classList.add(
@@ -792,7 +798,10 @@ form.addEventListener("submit", async (event) => {
     if (state.data) {
       render();
     }
-    setTimeout(loadData, 1200);
+    setTimeout(() => {
+      successMessageUntil = 0;
+      loadData();
+    }, 1200);
   } catch (error) {
     message.textContent =
       error && error.message
@@ -801,7 +810,9 @@ form.addEventListener("submit", async (event) => {
     message.classList.remove("form-message--success", "form-message--warning");
     message.classList.add("form-message--error");
   } finally {
-    state.submitting = false;
+    if (Date.now() >= successMessageUntil) {
+      state.submitting = false;
+    }
     validateForm();
   }
 });
