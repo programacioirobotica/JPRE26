@@ -60,7 +60,6 @@
                   <option value="Assistent">Assistent</option>
                   <option value="Tallerista">Tallerista</option>
                   <option value="Presentació d’experiències">Presentació d’experiències</option>
-                  <option value="Organització">Organització</option>
                 </select>
               </label>
             </div>
@@ -68,8 +67,15 @@
             <div class="workshops">
               <div class="workshops__header">
                 <h2>Selecció de tallers</h2>
-                <p>Hi ha 2 franges disponibles i només pots escollir 1 taller en total.</p>
+                <p>
+                  Hi ha 2 franges disponibles i només pots escollir 1 taller en total.
+                  Si ets tallerista o presentes una experiència, també pots indicar que no faràs cap taller.
+                </p>
               </div>
+              <label id="skip-workshop-option" class="skip-workshop is-hidden">
+                <input id="skip-workshop-checkbox" type="checkbox" name="senseTaller" />
+                <span>No faré cap taller</span>
+              </label>
               <div id="workshop-container" class="workshops__grid"></div>
             </div>
 
@@ -134,4 +140,3 @@
     <script src="app-20260326.js"></script>
   </body>
 </html>
-
