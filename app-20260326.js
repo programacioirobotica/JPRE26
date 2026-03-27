@@ -772,10 +772,7 @@ form.addEventListener("submit", async (event) => {
     state.submitting = true;
     validateForm();
     const result = await postForm(payload);
-    message.textContent =
-      result && result.message
-        ? result.message
-        : "Registre correcte. Gràcies per participar en la #JPRE26.";
+    message.textContent = "Enviat correctament.";
     message.classList.remove("form-message--error", "form-message--warning");
     message.classList.add(
       result && result.emailSent === false ? "form-message--warning" : "form-message--success"
