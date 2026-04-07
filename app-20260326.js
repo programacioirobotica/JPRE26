@@ -662,7 +662,7 @@ function loadData() {
     render();
     delete window[callbackName];
     script.remove();
-  }, 5000);
+  }, 15000);
 
   document.body.appendChild(script);
 }
