@@ -411,7 +411,7 @@ function render() {
 
       const availability = document.createElement("div");
       availability.className = `availability ${availabilityState}`;
-      availability.textContent = `Places disponibles: ${taller.placesDisponibles}`;
+      availability.textContent = `Places disponibles`;
 
       const availabilityRatio =
         taller.placesTotals > 0
