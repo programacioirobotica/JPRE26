@@ -422,21 +422,6 @@ function render() {
       const progress = document.createElement("div");
       progress.className = "availability-progress";
 
-      const progressTrack = document.createElement("div");
-      progressTrack.className = "availability-progress__track";
-
-      const progressBar = document.createElement("div");
-      progressBar.className = `availability-progress__bar ${availabilityState}`;
-      progressBar.style.width = `${availabilityPercent}%`;
-
-      const progressLabel = document.createElement("div");
-      progressLabel.className = `availability-progress__label ${availabilityState}`;
-      progressLabel.textContent = `${availabilityPercent}%`;
-
-      progressTrack.appendChild(progressBar);
-      progress.appendChild(progressTrack);
-      progress.appendChild(progressLabel);
-
       const topRow = document.createElement("div");
       topRow.className = "taller-card__topline";
       topRow.appendChild(meta);
