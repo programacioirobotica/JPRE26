@@ -162,15 +162,15 @@ function normalizedText(value, fallback = "No informat") {
 
 function franjaLabel(franjaNom, index) {
   const normalized = String(franjaNom || "").toLowerCase();
-  if (normalized.includes("1a")) return "09:30  Tallers - 1a Franja";
-  if (normalized.includes("2a")) return "11:30  Tallers - 2a Franja";
+  if (normalized.includes("1a")) return "10:00  Tallers - 1a Franja";
+  if (normalized.includes("2a")) return "12:00  Tallers - 2a Franja";
   return `${String(index + 1).padStart(2, "0")}:00  Tallers`;
 }
 
 function franjaTimeRange(franjaNom, index) {
   const normalized = String(franjaNom || "").toLowerCase();
-  if (normalized.includes("1a")) return "09:30-11:00";
-  if (normalized.includes("2a")) return "11:30-13:00";
+  if (normalized.includes("1a")) return "10:00-11:30";
+  if (normalized.includes("2a")) return "12:00-13:30";
   return `${String(9 + index * 2).padStart(2, "0")}:00-${String(10 + index * 2).padStart(2, "0")}:30`;
 }
 
