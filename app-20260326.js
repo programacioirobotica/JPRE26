@@ -445,12 +445,19 @@ function render() {
       header.appendChild(titleWrap);
       card.appendChild(header);
 
+      const availabilityState = availabilityClass(
+        taller.placesDisponibles,
+        taller.placesTotals
+      );
+      const availability = document.createElement("div");
       if (taller.placesDisponibles <= 0) {
-        const exhausted = document.createElement("div");
-        exhausted.className = "availability exhausted";
-        exhausted.textContent = "Places exhaurides";
-        card.appendChild(exhausted);
+        availability.className = "availability exhausted";
+        availability.textContent = "Places exhaurides";
+      } else {
+        availability.className = `availability ${availabilityState}`;
+        availability.textContent = "Places disponibles";
       }
+      card.appendChild(availability);
 
       card.addEventListener("click", () => handleSelect(franja.nom, taller));
 
