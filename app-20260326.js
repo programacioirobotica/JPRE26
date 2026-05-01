@@ -1,8 +1,10 @@
+﻿
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyIJA6Xg_JfJiHuK_obIjics_BjNvIfJqDFwR8gDqOUeC751cFoW7v2ddeF0QDsLE4/exec";
 
 function cacheNonce() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
+
 
 function buildId(franja, nom) {
   return `${franja.toLowerCase().replace(/\s+/g, "-")}-${nom
@@ -92,6 +94,8 @@ const modalDescripcio = document.getElementById("modal-descripcio");
 const modalMaterial = document.getElementById("modal-material");
 const modalEtapa = document.getElementById("modal-etapa");
 const modalAula = document.getElementById("modal-aula");
+const modalVideoBlock = document.getElementById("modal-video-block");
+const modalVideoIframe = document.getElementById("modal-video-iframe");
 
 let emailCheckTimer = null;
 let pendingSubmit = null;
@@ -162,15 +166,15 @@ function normalizedText(value, fallback = "No informat") {
 
 function franjaLabel(franjaNom, index) {
   const normalized = String(franjaNom || "").toLowerCase();
-  if (normalized.includes("1a")) return "10:00  Tallers - 1a Franja";
-  if (normalized.includes("2a")) return "12:00  Tallers - 2a Franja";
+  if (normalized.includes("1a")) return "09:30  Tallers - 1a Franja";
+  if (normalized.includes("2a")) return "11:30  Tallers - 2a Franja";
   return `${String(index + 1).padStart(2, "0")}:00  Tallers`;
 }
 
 function franjaTimeRange(franjaNom, index) {
   const normalized = String(franjaNom || "").toLowerCase();
-  if (normalized.includes("1a")) return "10:00-11:30";
-  if (normalized.includes("2a")) return "12:00-13:30";
+  if (normalized.includes("1a")) return "09:30-11:00";
+  if (normalized.includes("2a")) return "11:30-13:00";
   return `${String(9 + index * 2).padStart(2, "0")}:00-${String(10 + index * 2).padStart(2, "0")}:30`;
 }
 
@@ -258,6 +262,21 @@ function setModalImage(imgElement, src, altText, hideWhenMissing = false) {
   return true;
 }
 
+function toModalEmbedUrl(url) {
+  const v = String(url || "").trim();
+  if (!v) return "";
+  const ytWatch = v.match(/[?&]v=([^&]+)/);
+  const ytShort = v.match(/youtu\.be\/([^?&]+)/);
+  const ytEmbed = v.match(/youtube\.com\/embed\/([^?&]+)/);
+  const ytId = (ytWatch && ytWatch[1]) || (ytShort && ytShort[1]) || (ytEmbed && ytEmbed[1]);
+  if (ytId) return `https://www.youtube.com/embed/${ytId}`;
+  const vimeo = v.match(/vimeo\.com\/(\d+)/);
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
+  const gdrive = v.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (gdrive) return `https://drive.google.com/file/d/${gdrive[1]}/preview`;
+  return v;
+}
+
 function openWorkshopInfo(taller) {
   modalTitle.textContent = normalizedText(taller.nom, "Taller");
   modalImparteix.textContent = normalizedText(taller.imparteix);
@@ -277,6 +296,17 @@ function openWorkshopInfo(taller) {
     taller.imatgeDispositiuUrl,
     "Imatge del dispositiu o tecnologia"
   );
+
+  const embedUrl = toModalEmbedUrl(taller.videoUrl);
+  if (modalVideoBlock && modalVideoIframe) {
+    if (embedUrl) {
+      modalVideoIframe.src = embedUrl;
+      modalVideoBlock.classList.remove("is-hidden");
+    } else {
+      modalVideoIframe.src = "";
+      modalVideoBlock.classList.add("is-hidden");
+    }
+  }
 
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
@@ -409,8 +439,7 @@ function render() {
 
       const availability = document.createElement("div");
       availability.className = `availability ${availabilityState}`;
-      availability.textContent =
-        taller.placesDisponibles <= 0 ? "Places exhaurides" : "Places disponibles";
+      availability.textContent = `Places disponibles: ${taller.placesDisponibles}`;
 
       const availabilityRatio =
         taller.placesTotals > 0
@@ -420,6 +449,21 @@ function render() {
 
       const progress = document.createElement("div");
       progress.className = "availability-progress";
+
+      const progressTrack = document.createElement("div");
+      progressTrack.className = "availability-progress__track";
+
+      const progressBar = document.createElement("div");
+      progressBar.className = `availability-progress__bar ${availabilityState}`;
+      progressBar.style.width = `${availabilityPercent}%`;
+
+      const progressLabel = document.createElement("div");
+      progressLabel.className = `availability-progress__label ${availabilityState}`;
+      progressLabel.textContent = `${availabilityPercent}%`;
+
+      progressTrack.appendChild(progressBar);
+      progress.appendChild(progressTrack);
+      progress.appendChild(progressLabel);
 
       const topRow = document.createElement("div");
       topRow.className = "taller-card__topline";
@@ -819,3 +863,5 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("message", handleSubmitMessage);
 
 loadData();
+
+

@@ -2,10 +2,10 @@
  * Apps Script per al full de Google Sheets.
  * 1) Crea un full amb dues pestanyes: "Tallers" i "Inscripcions".
  * 2) Omple "Tallers" amb les columnes:
- *    A: Franja | B: Taller | C: PlacesDisponibles | D: Imparteix
- *    E: Foto1URL | F: Foto2URL | G: DispositiuTecnologia
- *    H: ImatgeDispositiuURL | I: Descripcio | J: MaterialNecessari
- *    K: Etapa
+ *    A: Num | B: Franja | C: Taller | D: PlacesDisponibles
+ *    E: Imparteix | F: Foto1URL | G: Foto2URL
+ *    H: DispositiuTecnologia | I: ImatgeDispositiuURL
+ *    J: Descripcio | K: MaterialNecessari | L: Etapa | M: Aula
  * 3) Desa el full i copia la seva ID.
  * 4) Enganxa la ID a la constant SHEET_ID.
  * 5) Implementa com a Web App (Executa com: tu mateix | Accés: Qualsevol amb l’enllaç).
@@ -15,6 +15,7 @@ const SHEET_ID = "10KUk3pRtlypRuOQeWustrGwow1reWi-pbjERv99nv5w";
 const TALLERS_SHEET = "Tallers";
 const INSCRIPCIONS_SHEET = "Inscripcions";
 const SUPPORT_EMAIL = "programacioirobotica@xtec.cat";
+const GOOGLE_CLIENT_IDS = ["PENDENT_GOOGLE_CLIENT_ID"];
 const JOURNEY_LOGO_URL = "https://drive.google.com/uc?export=view&id=11MNaV6-7V1F5GjYR2ceF2u8KjYAMJzWd";
 const FOOTER_LOGO_URL = "https://drive.google.com/uc?export=view&id=1mfKOJqcuxhFkDc3oJZw1Z8kHa1ijMl-b";
 const JOURNEY_LOGO_FILE_ID = "11MNaV6-7V1F5GjYR2ceF2u8KjYAMJzWd";
@@ -26,6 +27,11 @@ function doGet(e) {
     return jsonOrJsonp({ exists }, e);
   }
 
+  if (e && e.parameter && e.parameter.profileEmail) {
+    const result = getAppProfileByEmail(String(e.parameter.profileEmail).trim());
+    return jsonOrJsonp(result, e);
+  }
+
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const tallersSheet = ss.getSheetByName(TALLERS_SHEET);
   const range = tallersSheet.getDataRange();
@@ -34,24 +40,25 @@ function doGet(e) {
   const headers = (data.shift() || []).map((h) => normalizeHeader(h));
   richData.shift();
   const rows = data.filter((row) => {
-    const franja = getCellByHeader(headers, row, ["franja"], row[0]);
-    const taller = getCellByHeader(headers, row, ["taller", "nom"], row[1]);
+    const franja = getCellByHeader(headers, row, ["franja"], row[1]);
+    const taller = getCellByHeader(headers, row, ["taller", "nom"], row[2]);
     return String(franja || "").trim() && String(taller || "").trim();
   });
   const tallers = rows.map((row, idx) => {
     const rowRich = richData[idx] || [];
     return {
       rowIndex: idx + 2,
+      num: String(getCellByHeader(headers, row, ["num", "numero", "n"], row[0])).trim(),
       franja:
-        String(getCellByHeader(headers, row, ["franja"], row[0]) || "").trim() ||
+        String(getCellByHeader(headers, row, ["franja"], row[1]) || "").trim() ||
         "Franja",
-      nom: String(getCellByHeader(headers, row, ["taller", "nom"], row[1]) || "").trim(),
+      nom: String(getCellByHeader(headers, row, ["taller", "nom"], row[2]) || "").trim(),
       placesDisponibles: parsePlaces(
         getCellByHeader(
           headers,
           row,
           ["placesdisponibles", "places", "placeslliures"],
-          row[2]
+          row[3]
         )
       ),
       imparteix: String(
@@ -84,7 +91,9 @@ function doGet(e) {
       materialNecessari: String(
         getCellByHeader(headers, row, ["materialnecessari", "material"], "")
       ).trim(),
-      etapaEducativa: String(getCellByHeader(headers, row, ["etapa"], row[10])).trim(),
+      etapaEducativa: String(getCellByHeader(headers, row, ["etapa"], row[11])).trim(),
+      aula: String(getCellByHeader(headers, row, ["aula"], row[12])).trim(),
+      videoUrl: String(getCellByHeader(headers, row, ["videourl", "video"], "")).trim(),
     };
   });
   const ocupacions = getOcupacionsByTallerId();
@@ -99,6 +108,7 @@ function doGet(e) {
     const ocupades = ocupacions[id] || 0;
     const placesTotals = Math.max(taller.placesDisponibles + ocupades, 1);
     franges[taller.franja].push({
+      num: taller.num,
       id,
       nom: taller.nom,
       placesTotals,
@@ -111,6 +121,8 @@ function doGet(e) {
       descripcio: taller.descripcio,
       materialNecessari: taller.materialNecessari,
       etapaEducativa: taller.etapaEducativa,
+      aula: taller.aula,
+      videoUrl: taller.videoUrl,
     });
   });
 
@@ -179,53 +191,107 @@ function normalizeImageUrl(rawUrl) {
 }
 
 function doPost(e) {
+  if (e && e.parameter && e.parameter.googleCredential) {
+    const result = loginWithGoogleCredential(String(e.parameter.googleCredential || "").trim());
+    return iframeGoogleLoginResponse(result);
+  }
+
   const raw = (e && e.parameter && e.parameter.payload) || "{}";
   const payload = JSON.parse(raw);
   const email = String(payload.email || "").trim();
   const rol = String(payload.rol || "").trim();
+  const requestId = String(payload.requestId || "").trim();
+  const isOrganization = isOrganizationRole(rol);
+  const allowsEmptyWorkshopSelection = allowsEmptyWorkshopRole(rol);
+  const wantsNoWorkshop = allowsEmptyWorkshopSelection && Boolean(payload.senseTaller);
 
   if (!rol) {
-    return json({ ok: false, message: "Selecciona el teu rol de participació." });
+    return iframeSubmitResponse({
+      ok: false,
+      message: "Selecciona el teu rol de participació.",
+      requestId,
+    });
   }
 
   if (emailExists(email)) {
-    return json({ ok: false, message: "Aquest correu ja està inscrit." });
+    return iframeSubmitResponse({
+      ok: false,
+      message: "Aquest correu ja està inscrit.",
+      requestId,
+    });
   }
 
-  const seleccions = payload.seleccions || [];
-  if (seleccions.length !== 1) {
-    return json({ ok: false, message: "Has de seleccionar exactament 1 taller." });
+  const seleccions = Array.isArray(payload.seleccions) ? payload.seleccions : [];
+  if (!isOrganization && !wantsNoWorkshop && seleccions.length !== 1) {
+    return iframeSubmitResponse({
+      ok: false,
+      message: "Has de seleccionar exactament 1 taller.",
+      requestId,
+    });
   }
 
-  const tallersMap = getTallersMap();
+  if (wantsNoWorkshop && seleccions.length > 0) {
+    return iframeSubmitResponse({
+      ok: false,
+      message: "Si marques que no faràs cap taller, no pots seleccionar-ne cap.",
+      requestId,
+    });
+  }
 
-  for (var i = 0; i < seleccions.length; i++) {
-    var sel = seleccions[i];
+  const skipReservation = isOrganization || wantsNoWorkshop;
+  const effectiveSeleccions = skipReservation ? [] : seleccions;
+  const tallersMap = skipReservation ? {} : getTallersMap();
+
+  for (var i = 0; i < effectiveSeleccions.length; i++) {
+    var sel = effectiveSeleccions[i];
     var id = sel.tallerId;
     var taller = tallersMap[id];
     if (!taller) {
-      return json({ ok: false, message: "Taller no vàlid." });
+      return iframeSubmitResponse({
+        ok: false,
+        message: "Taller no vàlid.",
+        requestId,
+      });
     }
     if (taller.franja !== sel.franja) {
-      return json({ ok: false, message: "Franja no vàlida." });
+      return iframeSubmitResponse({
+        ok: false,
+        message: "Franja no vàlida.",
+        requestId,
+      });
     }
     if (taller.placesDisponibles <= 0) {
-      return json({ ok: false, message: "No queden places en aquest taller." });
+      return iframeSubmitResponse({
+        ok: false,
+        message: "No queden places en aquest taller.",
+        requestId,
+      });
     }
   }
 
-  const reserveResult = reserveWorkshopPlace(seleccions[0].tallerId);
+  const reserveResult = skipReservation
+    ? { ok: true, remaining: null, skippedReservation: true }
+    : reserveWorkshopPlace(effectiveSeleccions[0].tallerId);
   if (!reserveResult.ok) {
-    return json({ ok: false, message: reserveResult.message });
+    return iframeSubmitResponse({
+      ok: false,
+      message: reserveResult.message,
+      requestId,
+    });
   }
 
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const sheet = ss.getSheetByName(INSCRIPCIONS_SHEET);
-
-  const ids = seleccions.map((s) => s.tallerId).join(" | ");
-  const etiquetes = seleccions
-    .map((s) => `${s.franja}: ${s.tallerNom || s.tallerId}`)
-    .join(" | ");
+  const detailedSeleccions = effectiveSeleccions.map((sel) => {
+    const taller = tallersMap[sel.tallerId];
+    if (!taller) return sel;
+    return {
+      ...sel,
+      tallerNom: sel.tallerNom || taller.nom,
+      aula: taller.aula || "",
+    };
+  });
+  const selectionSummary = getSelectionSummary(detailedSeleccions, rol);
 
   sheet.appendRow([
     new Date(),
@@ -234,16 +300,19 @@ function doPost(e) {
     payload.localitat,
     email,
     rol,
-    ids,
-    etiquetes,
+    selectionSummary.ids,
+    selectionSummary.labels,
   ]);
+
+  var emailSent = false;
+  var emailErrorMessage = "";
 
   try {
     const branding = buildEmailBranding();
     const pdfBranding = buildPdfBranding(branding);
     const emailContent = buildConfirmationEmail(
       payload,
-      seleccions,
+      detailedSeleccions,
       reserveResult,
       branding
     );
@@ -251,7 +320,7 @@ function doPost(e) {
     try {
       const cardPdfBlob = buildCardPdfAttachment(
         payload,
-        seleccions,
+        detailedSeleccions,
         reserveResult,
         pdfBranding
       );
@@ -274,23 +343,78 @@ function doPost(e) {
       mailOptions.inlineImages = branding.inlineImages;
     }
     MailApp.sendEmail(mailOptions);
+    emailSent = true;
   } catch (error) {
     Logger.log("Error enviant correu de confirmació: " + error);
+    emailErrorMessage = String(error || "");
   }
 
-  return json({ ok: true });
+  return iframeSubmitResponse({
+    ok: true,
+    message: emailSent
+      ? "Registre correcte. Rebràs un correu de confirmació en breu."
+      : "La inscripció s'ha desat correctament, però no s'ha pogut enviar el correu de confirmació. Si us plau, contacta amb l'organització.",
+    emailSent: emailSent,
+    emailErrorMessage: emailErrorMessage,
+    requestId,
+  });
+}
+
+function isOrganizationRole(rol) {
+  return normalizeHeader(rol) === "organitzacio";
+}
+
+function allowsEmptyWorkshopRole(rol) {
+  const normalized = normalizeHeader(rol);
+  return (
+    normalized === "tallerista" ||
+    normalized === "presentaciodexperiencies" ||
+    normalized === "presentaciodeponencies"
+  );
+}
+
+function getSelectionSummary(seleccions, rol) {
+  const items = Array.isArray(seleccions) ? seleccions : [];
+  if (items.length === 0) {
+    if (isOrganizationRole(rol)) {
+      return {
+        ids: "",
+        labels: "Organització (sense taller)",
+        franja: "No aplica",
+        taller: "Inscripció d'organització",
+        aula: "No aplica",
+      };
+    }
+    return {
+      ids: "",
+      labels: "",
+      franja: "",
+      taller: "",
+      aula: "",
+    };
+  }
+
+  const first = items[0] || {};
+  return {
+    ids: items.map((s) => s.tallerId).join(" | "),
+    labels: items.map((s) => `${s.franja}: ${s.tallerNom || s.tallerId}`).join(" | "),
+    franja: String(first.franja || "").trim(),
+    taller: String(first.tallerNom || first.tallerId || "").trim(),
+    aula: String(first.aula || "").trim(),
+  };
 }
 
 function buildCardHtmlAttachment(payload, seleccions, reserveResult, branding) {
-  const sel = (seleccions && seleccions[0]) || {};
+  const selectionSummary = getSelectionSummary(seleccions, payload.rol);
   const templateHtml = getEmailCardTemplateHtml();
   const nom = String(payload.nom || "").trim();
   const centre = String(payload.centre || "").trim();
   const localitat = String(payload.localitat || "").trim();
   const email = String(payload.email || "").trim();
   const rol = String(payload.rol || "").trim();
-  const franja = String(sel.franja || "").trim();
-  const tallerNom = String(sel.tallerNom || sel.tallerId || "").trim();
+  const franja = selectionSummary.franja;
+  const tallerNom = selectionSummary.taller;
+  const aula = selectionSummary.aula;
   const transparentPixel =
     "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
   const topLogoSrc = JOURNEY_LOGO_URL || transparentPixel;
@@ -304,6 +428,7 @@ function buildCardHtmlAttachment(payload, seleccions, reserveResult, branding) {
     ROL: escapeHtml(rol),
     FRANJA: escapeHtml(franja),
     TALLER: escapeHtml(tallerNom),
+    AULA: escapeHtml(aula),
     SUPPORT_EMAIL: escapeHtml(SUPPORT_EMAIL),
     TOP_LOGO_SRC: escapeHtml(topLogoSrc),
     FOOTER_LOGO_SRC: escapeHtml(footerLogoSrc),
@@ -355,14 +480,15 @@ function toDataUri(blob) {
 }
 
 function buildCardPdfHtml(payload, seleccions, reserveResult, branding) {
-  const sel = (seleccions && seleccions[0]) || {};
+  const selectionSummary = getSelectionSummary(seleccions, payload.rol);
   const nom = String(payload.nom || "").trim();
   const centre = String(payload.centre || "").trim();
   const localitat = String(payload.localitat || "").trim();
   const email = String(payload.email || "").trim();
   const rol = String(payload.rol || "").trim();
-  const franja = String(sel.franja || "").trim();
-  const tallerNom = String(sel.tallerNom || sel.tallerId || "").trim();
+  const franja = selectionSummary.franja;
+  const tallerNom = selectionSummary.taller;
+  const aula = selectionSummary.aula;
   const topLogoHtml = branding.topLogoSrc
     ? '<img src="' +
       escapeHtml(branding.topLogoSrc) +
@@ -408,6 +534,9 @@ function buildCardPdfHtml(payload, seleccions, reserveResult, branding) {
     "<tr><td style=\"padding:8px;border:1px solid #e6dfdd;background:#f7f1ef;\"><strong>Taller</strong></td><td style=\"padding:8px;border:1px solid #e6dfdd;\">" +
     escapeHtml(tallerNom) +
     "</td></tr>" +
+    "<tr><td style=\"padding:8px;border:1px solid #e6dfdd;background:#f7f1ef;\"><strong>Aula</strong></td><td style=\"padding:8px;border:1px solid #e6dfdd;\">" +
+    escapeHtml(aula) +
+    "</td></tr>" +
     "</table>" +
     '<p style="margin:0;">Per consultes: ' +
     escapeHtml(SUPPORT_EMAIL) +
@@ -446,6 +575,7 @@ function getEmailCardTemplateHtml() {
       "<tr><td><strong>Perfil</strong></td><td>{{ROL}}</td></tr>" +
       "<tr><td><strong>Franja</strong></td><td>{{FRANJA}}</td></tr>" +
       "<tr><td><strong>Taller</strong></td><td>{{TALLER}}</td></tr>" +
+      "<tr><td><strong>Aula</strong></td><td>{{AULA}}</td></tr>" +
       "</table><p>Per consultes: <a href=\"mailto:programacioirobotica@xtec.cat\">programacioirobotica@xtec.cat</a></p>" +
       "<img class=\"footer-logo\" src=\"{{FOOTER_LOGO_SRC}}\" alt=\"Logo collaborador\" />" +
       "</div></div></body></html>"
@@ -525,14 +655,15 @@ function escapeHtml(value) {
 }
 
 function buildConfirmationEmail(payload, seleccions, reserveResult, branding) {
-  const sel = (seleccions && seleccions[0]) || {};
+  const selectionSummary = getSelectionSummary(seleccions, payload.rol);
   const nom = String(payload.nom || "").trim();
   const centre = String(payload.centre || "").trim();
   const localitat = String(payload.localitat || "").trim();
   const email = String(payload.email || "").trim();
   const rol = String(payload.rol || "").trim();
-  const franja = String(sel.franja || "").trim();
-  const tallerNom = String(sel.tallerNom || sel.tallerId || "").trim();
+  const franja = selectionSummary.franja;
+  const tallerNom = selectionSummary.taller;
+  const aula = selectionSummary.aula;
   const topLogoHtml = branding.topLogoSrc
     ? '<img src="' +
       escapeHtml(branding.topLogoSrc) +
@@ -567,6 +698,9 @@ function buildConfirmationEmail(payload, seleccions, reserveResult, branding) {
     "\n" +
     "- Taller: " +
     tallerNom +
+    "\n" +
+    "- Aula: " +
+    aula +
     "\n\n" +
     "Adjunt trobaràs la targeta de confirmació en PDF.\n" +
     "Per consultes: " +
@@ -604,6 +738,9 @@ function buildConfirmationEmail(payload, seleccions, reserveResult, branding) {
     "</td></tr>" +
     "<tr><td style=\"padding:8px;border:1px solid #e6dfdd;background:#f7f1ef;\"><strong>Taller</strong></td><td style=\"padding:8px;border:1px solid #e6dfdd;\">" +
     escapeHtml(tallerNom) +
+    "</td></tr>" +
+    "<tr><td style=\"padding:8px;border:1px solid #e6dfdd;background:#f7f1ef;\"><strong>Aula</strong></td><td style=\"padding:8px;border:1px solid #e6dfdd;\">" +
+    escapeHtml(aula) +
     "</td></tr>" +
     "</table>" +
     "<p style=\"margin:0 0 10px;\">Adjunt trobaràs la targeta de confirmació en PDF.</p>" +
@@ -656,20 +793,61 @@ function safeGetDriveBlob(fileId, filename) {
 function getTallersMap() {
   const ss = SpreadsheetApp.openById(SHEET_ID);
   const tallersSheet = ss.getSheetByName(TALLERS_SHEET);
-  const data = tallersSheet.getDataRange().getValues();
-  data.shift();
+  const range = tallersSheet.getDataRange();
+  const data = range.getValues();
+  const richData = range.getRichTextValues();
+  const headers = (data.shift() || []).map((h) => normalizeHeader(h));
+  richData.shift();
 
   const map = {};
   data.forEach((row, idx) => {
-    if (!row[1]) return;
-    const franja = String(row[0]).trim() || "Franja";
-    const nom = String(row[1]).trim();
+    const rowRich = richData[idx] || [];
+    const franja =
+      String(getCellByHeader(headers, row, ["franja"], row[1]) || "").trim() ||
+      "Franja";
+    const nom = String(getCellByHeader(headers, row, ["taller", "nom"], row[2]) || "").trim();
+    if (!nom) return;
     const id = buildId(franja, nom);
     map[id] = {
       rowIndex: idx + 2,
       franja,
       nom,
-      placesDisponibles: parsePlaces(row[2]),
+      num: String(getCellByHeader(headers, row, ["num", "numero", "n"], row[0]) || "").trim(),
+      aula: String(getCellByHeader(headers, row, ["aula"], row[12]) || "").trim(),
+      imparteix: String(
+        getCellByHeader(headers, row, ["imparteix", "ponent", "persones"], "")
+      ).trim(),
+      foto1Url: normalizeImageUrl(
+        getUrlCellByHeader(headers, row, rowRich, ["foto1url", "foto1", "foto_1"], "")
+      ),
+      foto2Url: normalizeImageUrl(
+        getUrlCellByHeader(headers, row, rowRich, ["foto2url", "foto2", "foto_2"], "")
+      ),
+      dispositiuTecnologia: String(
+        getCellByHeader(
+          headers,
+          row,
+          ["dispositiutecnologia", "dispositiu", "tecnologia"],
+          ""
+        )
+      ).trim(),
+      imatgeDispositiuUrl: normalizeImageUrl(
+        getUrlCellByHeader(
+          headers,
+          row,
+          rowRich,
+          ["imatgedispositiuurl", "imatgedispositiu", "imagetecnologia"],
+          ""
+        )
+      ),
+      descripcio: String(getCellByHeader(headers, row, ["descripcio", "descripció"], "")).trim(),
+      materialNecessari: String(
+        getCellByHeader(headers, row, ["materialnecessari", "material"], "")
+      ).trim(),
+      etapaEducativa: String(getCellByHeader(headers, row, ["etapa"], row[11]) || "").trim(),
+      placesDisponibles: parsePlaces(
+        getCellByHeader(headers, row, ["placesdisponibles", "places", "placeslliures"], row[3])
+      ),
     };
   });
 
@@ -713,14 +891,14 @@ function reserveWorkshopPlace(tallerId) {
     }
 
     const current = parsePlaces(
-      tallersSheet.getRange(taller.rowIndex, 3).getValue()
+      tallersSheet.getRange(taller.rowIndex, 4).getValue()
     );
     if (current <= 0) {
       return { ok: false, message: "No queden places en aquest taller." };
     }
 
     const remaining = current - 1;
-    tallersSheet.getRange(taller.rowIndex, 3).setValue(remaining);
+    tallersSheet.getRange(taller.rowIndex, 4).setValue(remaining);
     return { ok: true, remaining };
   } catch (error) {
     Logger.log("Error reservant plaça: " + error);
@@ -753,6 +931,205 @@ function emailExists(email) {
   return rows.some((row) => String(row[4] || "").trim().toLowerCase() === target);
 }
 
+function getAppProfileByEmail(email) {
+  if (!email) {
+    return {
+      found: false,
+      message: "Cal indicar un correu.",
+    };
+  }
+
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  const sheet = ss.getSheetByName(INSCRIPCIONS_SHEET);
+  if (!sheet) {
+    return {
+      found: false,
+      message: "No s'ha trobat la pestanya d'inscripcions.",
+    };
+  }
+
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) {
+    return {
+      found: false,
+      message: "Encara no hi ha inscripcions registrades.",
+    };
+  }
+
+  rows.shift();
+  const target = String(email).trim().toLowerCase();
+  let registrationRow = null;
+
+  for (var i = rows.length - 1; i >= 0; i--) {
+    var rowEmail = String(rows[i][4] || "").trim().toLowerCase();
+    if (rowEmail === target) {
+      registrationRow = rows[i];
+      break;
+    }
+  }
+
+  if (!registrationRow) {
+    return {
+      found: false,
+      message: "No hi ha cap inscripció associada a aquest correu.",
+    };
+  }
+
+  const rol = String(registrationRow[5] || "").trim();
+  const tallersMap = getTallersMap();
+  const selectionIds = String(registrationRow[6] || "")
+    .split("|")
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  const selections = selectionIds.map((id) => {
+    const taller = tallersMap[id];
+    if (!taller) {
+      return {
+        tallerId: id,
+        tallerNom: "",
+        franja: "",
+        aula: "",
+      };
+    }
+
+    return {
+      tallerId: id,
+      tallerNom: taller.nom,
+      franja: taller.franja,
+      aula: taller.aula,
+      imparteix: taller.imparteix,
+      foto1Url: taller.foto1Url,
+      foto2Url: taller.foto2Url,
+      dispositiuTecnologia: taller.dispositiuTecnologia,
+      imatgeDispositiuUrl: taller.imatgeDispositiuUrl,
+      descripcio: taller.descripcio,
+      materialNecessari: taller.materialNecessari,
+      etapaEducativa: taller.etapaEducativa,
+      placesDisponibles: taller.placesDisponibles,
+      num: taller.num,
+    };
+  });
+
+  return {
+    found: true,
+    profile: {
+      nom: String(registrationRow[1] || "").trim(),
+      centre: String(registrationRow[2] || "").trim(),
+      localitat: String(registrationRow[3] || "").trim(),
+      email: String(registrationRow[4] || "").trim(),
+      rol: rol,
+      tallerIds: selectionIds,
+      seleccions: selections,
+      resum: getSelectionSummary(selections, rol),
+      esOrganitzacio: isOrganizationRole(rol),
+      potAnarSenseTaller: allowsEmptyWorkshopRole(rol),
+    },
+  };
+}
+
+function loginWithGoogleCredential(credential) {
+  if (!credential) {
+    return {
+      ok: false,
+      message: "No s'ha rebut la credencial de Google.",
+    };
+  }
+
+  const verification = verifyGoogleIdToken(credential);
+  if (!verification.ok) {
+    return {
+      ok: false,
+      message: verification.message || "No s'ha pogut validar l'accés amb Google.",
+    };
+  }
+
+  const profileResult = getAppProfileByEmail(verification.email);
+  if (!profileResult || !profileResult.found || !profileResult.profile) {
+    return {
+      ok: false,
+      message:
+        (profileResult && profileResult.message) ||
+        "No hi ha cap inscripció associada a aquest compte de Google.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: "Accés correcte.",
+    profile: profileResult.profile,
+  };
+}
+
+function verifyGoogleIdToken(idToken) {
+  try {
+    const response = UrlFetchApp.fetch(
+      "https://oauth2.googleapis.com/tokeninfo?id_token=" +
+        encodeURIComponent(idToken),
+      {
+        muteHttpExceptions: true,
+      }
+    );
+
+    if (response.getResponseCode() !== 200) {
+      return {
+        ok: false,
+        message: "Google no ha validat la credencial enviada.",
+      };
+    }
+
+    const payload = JSON.parse(response.getContentText() || "{}");
+    const allowedClientIds = GOOGLE_CLIENT_IDS.filter(function (value) {
+      return String(value || "").trim() && String(value || "").trim() !== "PENDENT_GOOGLE_CLIENT_ID";
+    });
+    const audience = String(payload.aud || "").trim();
+    const email = String(payload.email || "").trim().toLowerCase();
+    const emailVerified = String(payload.email_verified || "").trim() === "true";
+    const expiresAt = parseInt(payload.exp, 10);
+    const now = Math.floor(Date.now() / 1000);
+
+    if (!audience) {
+      return {
+        ok: false,
+        message: "La credencial no inclou un client v\u00e0lid.",
+      };
+    }
+
+    if (allowedClientIds.length > 0 && allowedClientIds.indexOf(audience) === -1) {
+      return {
+        ok: false,
+        message: "La credencial de Google no correspon a aquesta aplicaci\u00f3.",
+      };
+    }
+
+    if (!email || !emailVerified) {
+      return {
+        ok: false,
+        message: "El compte de Google no ha pogut verificar el correu.",
+      };
+    }
+
+    if (!isFinite(expiresAt) || expiresAt <= now) {
+      return {
+        ok: false,
+        message: "La sessi\u00f3 de Google ha caducat. Torna-ho a provar.",
+      };
+    }
+
+    return {
+      ok: true,
+      email: email,
+      payload: payload,
+    };
+  } catch (error) {
+    Logger.log("Error validant token de Google: " + error);
+    return {
+      ok: false,
+      message: "No s'ha pogut comprovar l'acc\u00e9s amb Google.",
+    };
+  }
+}
+
 function buildId(franja, tallerNom) {
   return `${franja.toLowerCase().replace(/\s+/g, "-")}-${tallerNom
     .toLowerCase()
@@ -774,6 +1151,35 @@ function jsonOrJsonp(obj, e) {
     );
   }
   return json(obj);
+}
+
+function iframeSubmitResponse(result) {
+  return iframeMessageResponse("jpre-submit-result", result);
+}
+
+function iframeGoogleLoginResponse(result) {
+  return iframeMessageResponse("jpre-google-login-result", result);
+}
+
+function iframeMessageResponse(type, result) {
+  const payload = JSON.stringify({
+    type: String(type || ""),
+    ok: Boolean(result && result.ok),
+    message: String((result && result.message) || ""),
+    emailSent: Boolean(result && result.emailSent),
+    emailErrorMessage: String((result && result.emailErrorMessage) || ""),
+    requestId: String((result && result.requestId) || ""),
+    profile: result && result.profile ? result.profile : null,
+  });
+  const html =
+    "<!doctype html><html><body><script>" +
+    "window.top.postMessage(" +
+    payload +
+    ", '*');" +
+    "</script></body></html>";
+  return HtmlService.createHtmlOutput(html).setXFrameOptionsMode(
+    HtmlService.XFrameOptionsMode.ALLOWALL
+  );
 }
 
 
