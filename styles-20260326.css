@@ -400,6 +400,12 @@ input:focus {
   color: var(--danger);
 }
 
+.availability.exhausted {
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
 
 .availability-progress {
   margin-top: 10px;

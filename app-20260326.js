@@ -432,39 +432,6 @@ function render() {
         openWorkshopInfo(taller);
       });
 
-      const availabilityState = availabilityClass(
-        taller.placesDisponibles,
-        taller.placesTotals
-      );
-
-      const availability = document.createElement("div");
-      availability.className = `availability ${availabilityState}`;
-      availability.textContent = `Places disponibles: ${taller.placesDisponibles}`;
-
-      const availabilityRatio =
-        taller.placesTotals > 0
-          ? Math.max(0, Math.min(1, taller.placesDisponibles / taller.placesTotals))
-          : 0;
-      const availabilityPercent = Math.round(availabilityRatio * 100);
-
-      const progress = document.createElement("div");
-      progress.className = "availability-progress";
-
-      const progressTrack = document.createElement("div");
-      progressTrack.className = "availability-progress__track";
-
-      const progressBar = document.createElement("div");
-      progressBar.className = `availability-progress__bar ${availabilityState}`;
-      progressBar.style.width = `${availabilityPercent}%`;
-
-      const progressLabel = document.createElement("div");
-      progressLabel.className = `availability-progress__label ${availabilityState}`;
-      progressLabel.textContent = `${availabilityPercent}%`;
-
-      progressTrack.appendChild(progressBar);
-      progress.appendChild(progressTrack);
-      progress.appendChild(progressLabel);
-
       const topRow = document.createElement("div");
       topRow.className = "taller-card__topline";
       topRow.appendChild(meta);
@@ -477,8 +444,13 @@ function render() {
       header.appendChild(topRow);
       header.appendChild(titleWrap);
       card.appendChild(header);
-      card.appendChild(availability);
-      card.appendChild(progress);
+
+      if (taller.placesDisponibles <= 0) {
+        const exhausted = document.createElement("div");
+        exhausted.className = "availability exhausted";
+        exhausted.textContent = "Places exhaurides";
+        card.appendChild(exhausted);
+      }
 
       card.addEventListener("click", () => handleSelect(franja.nom, taller));
 
