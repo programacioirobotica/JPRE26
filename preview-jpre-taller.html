@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Preview temporal - Fitxa de Taller</title>
+    <link rel="stylesheet" href="wordpress-jpre-taller-shortcode/assets/jpre-taller-page.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background:
+          radial-gradient(circle at top left, rgba(106, 159, 179, 0.18), transparent 35%),
+          radial-gradient(circle at bottom right, rgba(213, 107, 76, 0.2), transparent 30%),
+          #f6f3ee;
+      }
+
+      .preview-wrap {
+        width: min(1100px, 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview-wrap">
+      <section class="jpre-taller-page">
+        <div class="jpre-shell">
+          <article class="jpre-hero">
+            <p class="jpre-kicker">Fitxa de Taller</p>
+            <h1 class="jpre-title">Robots creatius a l'aula</h1>
+            <div class="jpre-meta">
+              <span class="jpre-chip jpre-chip-franja">Franja: 10:00 - 11:30</span>
+              <span class="jpre-chip jpre-chip-etapa">Etapa: Primaria i Secundaria</span>
+              <span class="jpre-chip jpre-chip-aula">Aula: Laboratori 2</span>
+            </div>
+            <p class="jpre-loading is-hidden">Carregant informacio del taller...</p>
+            <p class="jpre-error is-hidden">No s'ha trobat el taller.</p>
+          </article>
+
+          <section class="jpre-main">
+            <div class="jpre-box">
+              <h3>Descripcio del taller</h3>
+              <p class="jpre-text jpre-descripcio">
+                Una sessio practica per descobrir propostes de robotica educativa amb reptes curts,
+                dinamica visual i activitats pensades per portar directament a l'aula.
+              </p>
+            </div>
+
+            <div class="jpre-box">
+              <h3>Places disponibles</h3>
+              <p class="jpre-text jpre-places">Places disponibles: 18</p>
+              <div class="jpre-progress">
+                <div class="jpre-progress-track">
+                  <div class="jpre-progress-bar high" style="width: 72%"></div>
+                </div>
+                <div class="jpre-progress-label high">72%</div>
+              </div>
+            </div>
+
+            <div class="jpre-box">
+              <h3>Imparteix</h3>
+              <p class="jpre-text jpre-imparteix">Marta Serra i Joan Pujol</p>
+              <div class="jpre-photos">
+                <img class="jpre-photo jpre-foto-1" alt="Foto ponent 1" />
+                <img class="jpre-photo jpre-foto-2" alt="Foto ponent 2" />
+              </div>
+            </div>
+
+            <div class="jpre-box">
+              <h3>Dispositiu / tecnologia</h3>
+              <div class="jpre-device-wrap">
+                <p class="jpre-text jpre-dispositiu">micro:bit, sensors basics i activitats guiades</p>
+                <img class="jpre-device-img" alt="Dispositiu" />
+              </div>
+            </div>
+
+            <div class="jpre-box">
+              <h3>Material necessari</h3>
+              <p class="jpre-text jpre-material">Portatil o Chromebook i ganes d'experimentar.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const svgPerson1 =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="60" fill="#b5dceb"/>
+            <circle cx="60" cy="42" r="20" fill="#2f5562"/>
+            <path d="M26 102c7-18 22-28 34-28s27 10 34 28" fill="#d56b4c"/>
+          </svg>
+        `);
+
+      const svgPerson2 =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="60" fill="#efd6d4"/>
+            <circle cx="60" cy="40" r="19" fill="#6a9fb3"/>
+            <path d="M24 102c8-20 23-30 36-30s28 10 36 30" fill="#1f2b32"/>
+          </svg>
+        `);
+
+      const svgDevice =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent(`
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72">
+            <rect width="72" height="72" rx="16" fill="#2f5562"/>
+            <rect x="16" y="18" width="40" height="28" rx="6" fill="#b5dceb"/>
+            <circle cx="26" cy="32" r="3" fill="#d56b4c"/>
+            <circle cx="36" cy="32" r="3" fill="#d56b4c"/>
+            <circle cx="46" cy="32" r="3" fill="#d56b4c"/>
+            <rect x="22" y="52" width="28" height="4" rx="2" fill="#efd6d4"/>
+          </svg>
+        `);
+
+      document.querySelector(".jpre-foto-1").src = svgPerson1;
+      document.querySelector(".jpre-foto-2").src = svgPerson2;
+      document.querySelector(".jpre-device-img").src = svgDevice;
+    </script>
+  </body>
+</html>

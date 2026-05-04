@@ -1,5 +1,5 @@
 ﻿
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyIJA6Xg_JfJiHuK_obIjics_BjNvIfJqDFwR8gDqOUeC751cFoW7v2ddeF0QDsLE4/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxQaAIj0boX1FKs1wSCJMUeHAcNtFoj50MAiSi36Na6cnwnxut29TPxoPspCzvkb0sd/exec";
 
 function cacheNonce() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
@@ -70,7 +70,6 @@ const state = {
   emailExists: false,
   emailChecked: "",
   submitting: false,
-  loadError: false,
 };
 
 const container = document.getElementById("workshop-container");
@@ -78,7 +77,6 @@ const workshopsSection = container.closest(".workshops");
 const form = document.getElementById("registration-form");
 const confirmButton = document.getElementById("confirm-button");
 const message = document.getElementById("form-message");
-const actionsSection = confirmButton.closest(".actions");
 const skipWorkshopOption = document.getElementById("skip-workshop-option");
 const skipWorkshopCheckbox = document.getElementById("skip-workshop-checkbox");
 const modal = document.getElementById("taller-modal");
@@ -99,8 +97,6 @@ const modalVideoIframe = document.getElementById("modal-video-iframe");
 
 let emailCheckTimer = null;
 let pendingSubmit = null;
-let loadErrorPanel = null;
-let successMessageUntil = 0;
 
 function selectedRole() {
   return String(form.elements.rol.value || "").trim();
@@ -134,10 +130,6 @@ function limitToTwoFranges(data) {
 }
 
 function sanitizeSelected() {
-  if (!state.data || !Array.isArray(state.data.franges)) {
-    state.selected = {};
-    return;
-  }
   const validFranges = new Set(state.data.franges.map((franja) => franja.nom));
   const entries = Object.entries(state.selected).filter(([franja]) =>
     validFranges.has(franja)
@@ -166,15 +158,15 @@ function normalizedText(value, fallback = "No informat") {
 
 function franjaLabel(franjaNom, index) {
   const normalized = String(franjaNom || "").toLowerCase();
-  if (normalized.includes("1a")) return "10:00  Tallers - 1a Franja";
-  if (normalized.includes("2a")) return "12:00  Tallers - 2a Franja";
+  if (normalized.includes("1a")) return "09:30  Tallers - 1a Franja";
+  if (normalized.includes("2a")) return "11:30  Tallers - 2a Franja";
   return `${String(index + 1).padStart(2, "0")}:00  Tallers`;
 }
 
 function franjaTimeRange(franjaNom, index) {
   const normalized = String(franjaNom || "").toLowerCase();
-  if (normalized.includes("1a")) return "10:00-11:30";
-  if (normalized.includes("2a")) return "12:00-13:30";
+  if (normalized.includes("1a")) return "09:30-11:00";
+  if (normalized.includes("2a")) return "11:30-13:00";
   return `${String(9 + index * 2).padStart(2, "0")}:00-${String(10 + index * 2).padStart(2, "0")}:30`;
 }
 
@@ -319,67 +311,11 @@ function closeWorkshopInfo() {
   document.body.style.overflow = "";
 }
 
-function getLoadErrorPanel() {
-  if (loadErrorPanel) {
-    return loadErrorPanel;
-  }
-
-  const panel = document.createElement("div");
-  panel.className = "load-error-panel is-hidden";
-  panel.innerHTML = `
-    <div class="load-error-panel__badge">Atenció</div>
-    <h3 class="load-error-panel__title">Els tallers no s'han carregat correctament</h3>
-    <p class="load-error-panel__text">
-      Si veus aquest avís, no continuïs amb aquesta finestra. Obre el formulari en una
-      <strong class="load-error-panel__highlight">finestra d'incògnit</strong> per carregar les dades reals.
-    </p>
-    <div class="load-error-panel__actions">
-      <button type="button" class="load-error-panel__button">
-        Copia la URL
-      </button>
-    </div>
-  `;
-
-  const actionButton = panel.querySelector(".load-error-panel__button");
-  actionButton.addEventListener("click", async () => {
-    const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-      actionButton.textContent = "URL copiada";
-      setTimeout(() => {
-        actionButton.textContent = "Copia la URL";
-      }, 1800);
-    } catch (error) {
-      window.prompt("Copia aquesta URL i obre-la en una finestra d'incògnit:", url);
-    }
-  });
-
-  workshopsSection.parentNode.insertBefore(panel, workshopsSection);
-  loadErrorPanel = panel;
-  return loadErrorPanel;
-}
-
-function toggleLoadErrorPanel(show) {
-  const panel = getLoadErrorPanel();
-  panel.classList.toggle("is-hidden", !show);
-}
-
 function render() {
   syncSkipWorkshopOption();
 
-  if (!state.data || !Array.isArray(state.data.franges)) {
-    container.innerHTML = "";
-    workshopsSection.classList.toggle("is-hidden", state.loadError);
-    actionsSection.classList.toggle("is-hidden", state.loadError);
-    toggleLoadErrorPanel(state.loadError);
-    validateForm();
-    return;
-  }
-
   sanitizeSelected();
   container.innerHTML = "";
-  toggleLoadErrorPanel(false);
-  actionsSection.classList.remove("is-hidden");
   workshopsSection.classList.remove("is-hidden");
 
   state.data.franges.forEach((franja, franjaIndex) => {
@@ -432,6 +368,39 @@ function render() {
         openWorkshopInfo(taller);
       });
 
+      const availabilityState = availabilityClass(
+        taller.placesDisponibles,
+        taller.placesTotals
+      );
+
+      const availability = document.createElement("div");
+      availability.className = `availability ${availabilityState}`;
+      availability.textContent = `Places disponibles: ${taller.placesDisponibles}`;
+
+      const availabilityRatio =
+        taller.placesTotals > 0
+          ? Math.max(0, Math.min(1, taller.placesDisponibles / taller.placesTotals))
+          : 0;
+      const availabilityPercent = Math.round(availabilityRatio * 100);
+
+      const progress = document.createElement("div");
+      progress.className = "availability-progress";
+
+      const progressTrack = document.createElement("div");
+      progressTrack.className = "availability-progress__track";
+
+      const progressBar = document.createElement("div");
+      progressBar.className = `availability-progress__bar ${availabilityState}`;
+      progressBar.style.width = `${availabilityPercent}%`;
+
+      const progressLabel = document.createElement("div");
+      progressLabel.className = `availability-progress__label ${availabilityState}`;
+      progressLabel.textContent = `${availabilityPercent}%`;
+
+      progressTrack.appendChild(progressBar);
+      progress.appendChild(progressTrack);
+      progress.appendChild(progressLabel);
+
       const topRow = document.createElement("div");
       topRow.className = "taller-card__topline";
       topRow.appendChild(meta);
@@ -444,20 +413,8 @@ function render() {
       header.appendChild(topRow);
       header.appendChild(titleWrap);
       card.appendChild(header);
-
-      const availabilityState = availabilityClass(
-        taller.placesDisponibles,
-        taller.placesTotals
-      );
-      const availability = document.createElement("div");
-      if (taller.placesDisponibles <= 0) {
-        availability.className = "availability exhausted";
-        availability.textContent = "Places exhaurides";
-      } else {
-        availability.className = `availability ${availabilityState}`;
-        availability.textContent = "Places disponibles";
-      }
       card.appendChild(availability);
+      card.appendChild(progress);
 
       card.addEventListener("click", () => handleSelect(franja.nom, taller));
 
@@ -504,14 +461,6 @@ function getSelections() {
 }
 
 function validateForm() {
-  if (Date.now() < successMessageUntil) {
-    message.textContent = "Enviat correctament.";
-    message.classList.remove("form-message--error", "form-message--warning");
-    message.classList.add("form-message--success");
-    confirmButton.disabled = true;
-    return;
-  }
-
   const email = form.elements.email.value.trim();
   const emailOk = Boolean(email);
   const rolOk = form.elements.rol.value.trim();
@@ -522,26 +471,15 @@ function validateForm() {
     emailOk &&
     rolOk;
 
-  const dataReady = Boolean(state.data && Array.isArray(state.data.franges));
   const selectionsOk =
     Object.keys(state.selected).length >= 1 || isSkippingWorkshopSelection();
 
-  message.classList.remove("form-message--error", "form-message--warning", "form-message--success");
-
-  if (state.loadError) {
-    message.textContent =
-      "No s'han pogut carregar els tallers reals. Prova en finestra d'incògnit o en un altre navegador.";
-    message.classList.add("form-message--error");
-  } else if (state.submitting) {
+  if (state.submitting) {
     message.textContent = "Enviant inscripció...";
-    message.classList.add("form-message--warning");
   } else if (state.emailChecking) {
     message.textContent = "Comprovant si ja estàs inscrit...";
-    message.classList.add("form-message--warning");
   } else if (state.emailExists) {
-    message.textContent =
-      "Aquest correu ja està inscrit. Si vols canviar alguna dada o la teva inscripció, contacta amb l'organització.";
-    message.classList.add("form-message--error");
+    message.textContent = "Aquest correu ja està inscrit.";
   } else if (canSkipWorkshopSelection() && !isSkippingWorkshopSelection() && !Object.keys(state.selected).length) {
     message.textContent = "Pots escollir 1 taller o marcar l'opció \"No faré cap taller\".";
     message.classList.add("form-message--warning");
@@ -550,11 +488,7 @@ function validateForm() {
   }
 
   confirmButton.disabled =
-    !(requiredFilled && selectionsOk && dataReady) ||
-    state.emailChecking ||
-    state.emailExists ||
-    state.submitting ||
-    state.loadError;
+    !(requiredFilled && selectionsOk) || state.emailChecking || state.emailExists || state.submitting;
 }
 
 function scheduleEmailCheck() {
@@ -614,15 +548,13 @@ function checkEmailExists(email) {
 
 function loadData() {
   if (WEB_APP_URL === "PENDENT_WEB_APP_URL") {
-    state.data = null;
-    state.loadError = true;
+    state.data = limitToTwoFranges(mockData);
     message.textContent =
-      "Falta configurar el Web App. Actualitza l'URL abans de publicar el formulari.";
+      "Mode prova: dades simulades. Actualitza l'URL del Web App per connectar amb Sheets.";
     render();
     return;
   }
 
-  state.loadError = false;
   message.textContent = "Carregant places disponibles...";
 
   const nonce = cacheNonce();
@@ -633,12 +565,10 @@ function loadData() {
     if (!data || !data.franges) {
       message.textContent =
         "Resposta no vàlida del servidor. Comprova el desplegament.";
-      state.data = null;
-      state.loadError = true;
+      state.data = limitToTwoFranges(mockData);
       render();
     } else {
       state.data = limitToTwoFranges(data);
-      state.loadError = false;
       message.textContent = "";
       render();
     }
@@ -652,9 +582,8 @@ function loadData() {
   script.src = `${WEB_APP_URL}${sep}callback=${callbackName}&_ts=${nonce}`;
   script.onerror = () => {
     message.textContent =
-      "No s'han pogut carregar els tallers reals. Prova en finestra d'incògnit o en un altre navegador.";
-    state.data = null;
-    state.loadError = true;
+      "No s'han pogut carregar els tallers. Torna-ho a provar més tard.";
+    state.data = limitToTwoFranges(mockData);
     render();
     if (timeoutId) clearTimeout(timeoutId);
     delete window[callbackName];
@@ -663,13 +592,12 @@ function loadData() {
 
   timeoutId = setTimeout(() => {
     message.textContent =
-      "El servidor no ha respost. Prova en finestra d'incògnit o en un altre navegador.";
-    state.data = null;
-    state.loadError = true;
+      "El servidor no ha respost. Recarrega la pàgina o revisa el desplegament.";
+    state.data = limitToTwoFranges(mockData);
     render();
     delete window[callbackName];
     script.remove();
-  }, 15000);
+  }, 5000);
 
   document.body.appendChild(script);
 }
@@ -766,11 +694,9 @@ if (skipWorkshopCheckbox) {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   message.textContent = "";
-  message.classList.remove("form-message--error", "form-message--warning", "form-message--success");
 
   if (confirmButton.disabled) {
     message.textContent = "Revisa les dades abans de confirmar.";
-    message.classList.add("form-message--warning");
     return;
   }
 
@@ -787,14 +713,8 @@ form.addEventListener("submit", async (event) => {
   try {
     state.submitting = true;
     validateForm();
-    const result = await postForm(payload);
-    state.submitting = false;
-    successMessageUntil = Date.now() + 1200;
-    message.textContent = "Enviat correctament.";
-    message.classList.remove("form-message--error", "form-message--warning");
-    message.classList.add(
-      result && result.emailSent === false ? "form-message--warning" : "form-message--success"
-    );
+    await postForm(payload);
+    message.textContent = "Registre correcte. Gràcies per participar en la #JPRE26.";
     form.reset();
     state.selected = {};
     state.emailChecked = "";
@@ -805,21 +725,14 @@ form.addEventListener("submit", async (event) => {
     if (state.data) {
       render();
     }
-    setTimeout(() => {
-      successMessageUntil = 0;
-      loadData();
-    }, 1200);
+    setTimeout(loadData, 1200);
   } catch (error) {
     message.textContent =
       error && error.message
         ? error.message
         : "Error en enviar la inscripció. Torna-ho a provar.";
-    message.classList.remove("form-message--success", "form-message--warning");
-    message.classList.add("form-message--error");
   } finally {
-    if (Date.now() >= successMessageUntil) {
-      state.submitting = false;
-    }
+    state.submitting = false;
     validateForm();
   }
 });
